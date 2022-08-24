@@ -9,6 +9,7 @@ namespace Game.Scripts.Player
     [RequireComponent(typeof(CharacterController))]
     public class Player : MonoBehaviour
     {
+        private GameInputs _input;
         private CharacterController _controller;
         private Animator _anim;
         [SerializeField]
@@ -25,6 +26,8 @@ namespace Game.Scripts.Player
 
         private void OnEnable()
         {
+            _input = new GameInputs();
+            _input.Player.Enable();
             InteractableZone.onZoneInteractionComplete += InteractableZone_onZoneInteractionComplete;
             Laptop.onHackComplete += ReleasePlayerControl;
             Laptop.onHackEnded += ReturnPlayerControl;
@@ -51,11 +54,31 @@ namespace Game.Scripts.Player
         private void Update()
         {
             if (_canMove == true)
-                CalcutateMovement();
-
+                CalculateMovement();
         }
 
-        private void CalcutateMovement()
+        private void CalculateMovement()
+        {
+            var move = _input.Player.Movement.ReadValue<Vector2>();
+
+            transform.Rotate(transform.up * move.x);
+
+            var direction = transform.forward * move.y;
+            var velocity = direction * _speed;
+
+            _anim.SetFloat("Speed", Mathf.Abs(velocity.magnitude));
+
+            if (_playerGrounded)
+                velocity.y = 0f;
+            if (!_playerGrounded)
+            {
+                velocity.y += -20f * Time.deltaTime;
+            }
+
+            _controller.Move(velocity * Time.deltaTime);
+        }
+
+        /*private void CalcutateMovementOld()
         {
             _playerGrounded = _controller.isGrounded;
             float h = Input.GetAxisRaw("Horizontal");
@@ -79,7 +102,7 @@ namespace Game.Scripts.Player
             
             _controller.Move(velocity * Time.deltaTime);                      
 
-        }
+        }*/
 
         private void InteractableZone_onZoneInteractionComplete(InteractableZone zone)
         {
@@ -119,6 +142,7 @@ namespace Game.Scripts.Player
 
         private void OnDisable()
         {
+            _input.Player.Disable();
             InteractableZone.onZoneInteractionComplete -= InteractableZone_onZoneInteractionComplete;
             Laptop.onHackComplete -= ReleasePlayerControl;
             Laptop.onHackEnded -= ReturnPlayerControl;
